@@ -32,15 +32,15 @@ export default function ScannerScreen() {
   // Çoklu okumayı (race condition) anında kilitleyen referans:
   const isScanningLocked = useRef(false);
 
-  useEffect(() => {
-    async function loadUser() {
-      const savedId = await SecureStore.getItemAsync('current_employee_id');
-      if (savedId) {
-        setEmployeeId(savedId); // Artık login olan personelin sicil numarası gidecek!
-      }
-    }
-    loadUser();
-  }, []);
+  // useEffect(() => {
+  //   async function loadUser() {
+  //     const savedId = await SecureStore.getItemAsync('current_employee_id');
+  //     if (savedId) {
+  //       setEmployeeId(savedId); // Artık login olan personelin sicil numarası gidecek!
+  //     }
+  //   }
+  //   loadUser();
+  // }, []);
 
   // Cihaz Kimliğini (Hardware ID) Al veya Üret
   useEffect(() => {
@@ -87,7 +87,7 @@ export default function ScannerScreen() {
   };
 
   // Karekod Algılandığında Tetiklenen Fonksiyon
-  const handleBarcodeScanned = async ({ data }) => {
+  const handleBarcodeScanned = async ({ data }:any) => {
     if (isScanningLocked.current || scanned || loading) return;
 
     isScanningLocked.current = true;
