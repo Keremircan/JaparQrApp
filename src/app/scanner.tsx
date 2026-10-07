@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
-  SafeAreaView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
@@ -31,6 +31,16 @@ export default function ScannerScreen() {
 
   // Çoklu okumayı (race condition) anında kilitleyen referans:
   const isScanningLocked = useRef(false);
+
+  useEffect(() => {
+    async function loadUser() {
+      const savedId = await SecureStore.getItemAsync('current_employee_id');
+      if (savedId) {
+        setEmployeeId(savedId); // Artık login olan personelin sicil numarası gidecek!
+      }
+    }
+    loadUser();
+  }, []);
 
   // Cihaz Kimliğini (Hardware ID) Al veya Üret
   useEffect(() => {
