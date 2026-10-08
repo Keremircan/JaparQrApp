@@ -1,54 +1,58 @@
-import { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { ActivityIndicator, View } from 'react-native';
+import { SplashScreen, Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+
+import { SessionProvider, useSession } from '@/context/session';
+import { colors } from '@/constants/theme';
+
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const segments = useSegments();
-  const router = useRouter();
+  return (
+    <SessionProvider>
+      <SplashScreenController />
+      <StatusBar style="dark" />
+      <RootNavigator />
+    </SessionProvider>
+  );
+}
 
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const session = await SecureStore.getItemAsync('user_session');
-        setIsAuthenticated(!!session);
-      } catch (e) {
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    checkAuth();
-  }, []);
+function SplashScreenController() {
+  const { isLoading } = useSession();
 
-  useEffect(() => {
-    if (isLoading) return;
+  if (!isLoading) {
+    SplashScreen.hide();
+  }
 
-    const inAppGroup = segments[0] === '(app)';
+  return null;
+}
 
-    if (!isAuthenticated && inAppGroup) {
-      // Oturum yoksa login'e yönlendir
-      router.replace('/sign-in');
-    } else if (isAuthenticated && segments[0] === 'sign-in') {
-      // Oturum varsa ana sayfaya yönlendir
-      router.replace('/(app)/(tabs)');
-    }
-  }, [isAuthenticated, segments, isLoading]);
+function RootNavigator() {
+  const { session, isLoading } = useSession();
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F172A' }}>
-        <ActivityIndicator size="large" color="#38BDF8" />
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.navy} />
       </View>
     );
   }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="signIn" />
-      <Stack.Screen name="(app)" />
+      <Stack.Protected guard={!!session}>
+        <Stack.Screen name="(tabs)" />
+      </Stack.Protected>
+      <Stack.Protected guard={!session}>
+        <Stack.Screen name="sign-in" />
+      </Stack.Protected>
     </Stack>
   );
 }
