@@ -47,7 +47,7 @@ export default function RootLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="sign-in" />
+      <Stack.Screen name="signIn" />
       <Stack.Screen name="(app)" />
     </Stack>
   );

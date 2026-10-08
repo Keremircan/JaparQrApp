@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Platform
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, BarcodeScanningResult} from 'expo-camera';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 
@@ -20,27 +20,32 @@ const SCAN_AREA_SIZE = width * 0.72; // Ekran boyutuna göre dinamik vizör geni
 const BACKEND_URL = "http://192.168.1.110:3000/api/verify"; 
 
 // Test amaçlı sabit sicil no
-const CURRENT_EMPLOYEE_ID = "EMP-10293"; 
+// const CURRENT_EMPLOYEE_ID = "EMP-10293"; 
 
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hardwareId, setHardwareId] = useState('');
+  const [employeeId, setEmployeeId] = useState<string>('EMP-10293');
   const [scanType, setScanType] = useState('IN'); // 'IN' (Giriş) veya 'OUT' (Çıkış)
 
   // Çoklu okumayı (race condition) anında kilitleyen referans:
   const isScanningLocked = useRef(false);
 
-  // useEffect(() => {
-  //   async function loadUser() {
-  //     const savedId = await SecureStore.getItemAsync('current_employee_id');
-  //     if (savedId) {
-  //       setEmployeeId(savedId); // Artık login olan personelin sicil numarası gidecek!
-  //     }
-  //   }
-  //   loadUser();
-  // }, []);
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const savedId = await SecureStore.getItemAsync('current_employee_id');
+        if (savedId) {
+          setEmployeeId(savedId);
+        }
+      } catch (e) {
+        console.error('Kullanıcı sicili okunamadı:', e);
+      }
+    }
+    loadUser();
+  }, []);
 
   // Cihaz Kimliğini (Hardware ID) Al veya Üret
   useEffect(() => {
@@ -87,13 +92,13 @@ export default function ScannerScreen() {
   };
 
   // Karekod Algılandığında Tetiklenen Fonksiyon
-  const handleBarcodeScanned = async ({ data }:any) => {
+  const handleBarcodeScanned = async ({ data }:BarcodeScanningResult) => {
     if (isScanningLocked.current || scanned || loading) return;
 
     isScanningLocked.current = true;
     setScanned(true);
     setLoading(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
       const response = await fetch(BACKEND_URL, {
@@ -101,7 +106,7 @@ export default function ScannerScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           qrData: data,
-          employeeId: CURRENT_EMPLOYEE_ID,
+          employeeId: employeeId,
           hardwareId: hardwareId,
           type: scanType // Seçili olan IN veya OUT tipini yollar
         })
@@ -143,7 +148,7 @@ export default function ScannerScreen() {
       />
 
       {/* 2. Kamera Üstü Modern Vizör ve Arayüz */}
-      <SafeAreaView style={styles.overlay}>
+      <View style={styles.overlay}>
         {/* Giriş / Çıkış Seçim Sekmesi */}
         <View style={styles.typeSelector}>
           <TouchableOpacity
@@ -186,7 +191,7 @@ export default function ScannerScreen() {
         <Text style={styles.hintText}>
           {loading ? "Giriş doğrulanıyor..." : "Karekod ekrandaki çerçevenin içine hizalayın"}
         </Text>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
@@ -233,7 +238,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingTop: Platform.OS === 'ios' ? 60 : 30, // Dinamik Ada ve Çentik payı
+    paddingBottom: 30,
   },
 
   // Giriş / Çıkış Seçici
