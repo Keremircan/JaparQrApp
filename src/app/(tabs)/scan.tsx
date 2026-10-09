@@ -21,7 +21,9 @@ import { useSession } from "@/context/session";
 
 const { width } = Dimensions.get("window");
 const SCAN_AREA_SIZE = width * 0.72;
-const BACKEND_URL = "http://192.168.1.110:3000/api/verify";
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const VERIFY_URL = `${API_URL}/api/verify`;
 
 export default function ScannerScreen() {
   const { employee } = useSession();
@@ -92,7 +94,7 @@ export default function ScannerScreen() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      const response = await fetch(BACKEND_URL, {
+      const response = await fetch(VERIFY_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

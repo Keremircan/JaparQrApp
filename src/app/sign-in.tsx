@@ -19,7 +19,8 @@ import { useSession } from '@/context/session';
 import { colors, radius, spacing } from '@/constants/theme';
 
 // Bilgisayarınızın yerel IP adresi
-const LOGIN_URL = "http://192.168.1.110:3000/api/login";
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const LOGIN_URL = `${API_URL}/api/login`;
 
 export default function SignInScreen() {
   const { signIn } = useSession();

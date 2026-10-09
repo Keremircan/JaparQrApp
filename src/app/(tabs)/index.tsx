@@ -16,7 +16,9 @@ import * as Haptics from "expo-haptics";
 import { useSession } from "@/context/session";
 import { colors, radius, spacing } from "@/constants/theme";
 
-const LogList_URL = "http://192.168.1.110:3000/api/listLogs";
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const LogList_URL = `${API_URL}/api/listLogs`;
 
 export default function HomeScreen() {
   const { employee, signOut, setLastType } = useSession();
