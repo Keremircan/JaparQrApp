@@ -59,9 +59,10 @@ export default function SignInScreen() {
         signIn({
           name: data.user.fullName || 'Personel',
           employeeCode: data.user.employeeCode,
-          department:'Üretim',
-          title: 'Operatör',
-          shift: '08:00 – 16:00',
+          department:data.user.department,
+          job: data.user.job,
+          shift: data.user.shift,
+          shift_type: data.user.shift_type
         });
 
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

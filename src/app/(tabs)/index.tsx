@@ -15,34 +15,12 @@ import * as Haptics from "expo-haptics";
 import { useSession } from "@/context/session";
 import { colors, radius, spacing } from "@/constants/theme";
 
-// const SAMPLE_MOVEMENTS = [
-//   {
-//     id: "1",
-//     type: "Giriş",
-//     time: "07:58",
-//     gate: "Ana Giriş A",
-//     status: "Onaylandı",
-//   },
-//   {
-//     id: "2",
-//     type: "Çıkış",
-//     time: "12:02",
-//     gate: "Yemekhane",
-//     status: "Onaylandı",
-//   },
-//   {
-//     id: "3",
-//     type: "Giriş",
-//     time: "12:41",
-//     gate: "Üretim Kapısı B",
-//     status: "Onaylandı",
-//   },
-// ];
 const LogList_URL = "http://192.168.1.110:3000/api/listLogs";
 
 export default function HomeScreen() {
   const { employee, signOut, setLastType } = useSession();
   const [loading, setLoading] = useState(false);
+  const [workingTime, setWorkingTime] = useState("");
 
   // Log elemanının tip tanımı
   type AttendanceLog = {
@@ -61,15 +39,59 @@ export default function HomeScreen() {
     month: "long",
   }).format(new Date());
 
+  function calculateWorkDuration(logs: AttendanceLog[]) {
+    if (!logs || logs.length === 0) {
+      setWorkingTime("0s 0dk");
+      return;
+    }
+
+    // Saat string'ini (örn: "07:58") bugünün Date nesnesine dönüştüren yardımcı:
+    const parseTimeToDate = (timeStr: string): Date => {
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      const date = new Date();
+      date.setHours(hours || 0, minutes || 0, 0, 0);
+      return date;
+    };
+
+    // Logları günün başından sonuna kronolojik sırala (eskiden yeniye)
+    const sorted = [...logs].sort(
+      (a, b) =>
+        parseTimeToDate(a.time).getTime() - parseTimeToDate(b.time).getTime(),
+    );
+
+    let totalMs = 0;
+    let lastInTime: Date | null = null;
+
+    for (const log of sorted) {
+      const logDate = parseTimeToDate(log.time);
+
+      if (log.type === "IN") {
+        lastInTime = logDate;
+      } else if (log.type === "OUT" && lastInTime) {
+        totalMs += logDate.getTime() - lastInTime.getTime();
+        lastInTime = null; // Giriş - Çıkış çifti tamamlandı
+      }
+    }
+
+    // Eğer personel hâlâ içerideyse (çıkış yapmadıysa), şu anki saate kadar olan süreyi ekle
+    if (lastInTime) {
+      totalMs += Date.now() - lastInTime.getTime();
+    }
+
+    const totalMinutes = Math.floor(Math.max(0, totalMs) / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    setWorkingTime(`${hours}s ${minutes}dk`);
+  }
+
   const handleListLogs = async () => {
     if (!employee?.employeeCode) return;
 
     setLoading(true);
-
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
-      // 1. Backend İsteği
       const response = await fetch(LogList_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,14 +106,18 @@ export default function HomeScreen() {
         const logs = data.logList || [];
         setLogList(logs);
 
-        // En son hareket DESC sıralı olduğu için ilk elemandır:
+        // 1. Süreyi yeni gelen veriyle hesapla:
+        calculateWorkDuration(logs);
+
+        // 2. En son hareketi kaydet:
         if (logs.length > 0) {
-          setLastType(logs[0].type); // 'IN' veya 'OUT'
+          setLastType(logs[0].type);
         } else {
-          setLastType(null); // Bugün henüz hareket yok
+          setLastType(null);
         }
       } else {
         setLogList([]);
+        setWorkingTime("0s 0dk");
       }
     } catch (error) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -104,7 +130,7 @@ export default function HomeScreen() {
     }
   };
 
-  // 2. Kamera ekranından geri dönüldüğünde listenin otomatik tazelenmesi için:
+  // useFocusEffect artık sadece handleListLogs çağıracak:
   useFocusEffect(
     useCallback(() => {
       void handleListLogs();
@@ -143,7 +169,7 @@ export default function HomeScreen() {
           <View style={styles.profileMeta}>
             <Text style={styles.profileName}>{employee?.name}</Text>
             <Text style={styles.profileRole}>
-              {employee?.title} · {employee?.department}
+              {employee?.job ?? "Personel"} · {employee?.department?? "Departman"}
             </Text>
             <Text style={styles.profileCode}>
               Sicil {employee?.employeeCode}
@@ -187,14 +213,14 @@ export default function HomeScreen() {
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Vardiya</Text>
             <Text style={styles.statValueSm}>
-              {employee?.shift ?? "08:00 – 16:00"}
+              {employee?.shift}
             </Text>
-            <Text style={styles.statHint}>Gündüz vardiyası</Text>
+            <Text style={styles.statHint}>{employee?.shift_type}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Bu hafta</Text>
-            <Text style={styles.statValue}>32s</Text>
-            <Text style={styles.statHint}>4 iş günü</Text>
+            <Text style={styles.statLabel}>Bugün</Text>
+            <Text style={styles.statValue}>{workingTime}</Text>
+            {/* {<Text style={styles.statHint}>4 iş günü</Text>} */}
           </View>
         </View>
 

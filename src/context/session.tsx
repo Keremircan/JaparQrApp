@@ -6,8 +6,9 @@ export type EmployeeSession = {
   name: string;
   employeeCode: string;
   department: string;
-  title: string;
+  job: string;
   shift: string;
+  shift_type: string;
   lastType?: 'IN' | 'OUT' | null;
 };
 
