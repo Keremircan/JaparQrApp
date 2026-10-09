@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
+  Linking
 } from "react-native";
 import {
   CameraView,
@@ -71,8 +72,15 @@ export default function ScannerScreen() {
         <Text style={styles.permissionText}>
           Giriş yapabilmek için kamera izni gerekiyor.
         </Text>
-        <TouchableOpacity style={styles.btn} onPress={requestPermission}>
-          <Text style={styles.btnText}>İzin Ver</Text>
+
+        {/* Eğer kullanıcı izni kalıcı olarak reddettiyse Ayarlar'a yönlendir, aksi halde izin iste */}
+        <TouchableOpacity
+          style={styles.btn}
+          onPress={permission.canAskAgain ? requestPermission : () => Linking.openSettings()}
+        >
+          <Text style={styles.btnText}>
+            {permission.canAskAgain ? "İzin Ver" : "Ayarları Aç"}
+          </Text>
         </TouchableOpacity>
       </View>
     );
