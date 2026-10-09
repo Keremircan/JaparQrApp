@@ -7,6 +7,7 @@ import {
   View,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +22,7 @@ export default function HomeScreen() {
   const { employee, signOut, setLastType } = useSession();
   const [loading, setLoading] = useState(false);
   const [workingTime, setWorkingTime] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   // Log elemanının tip tanımı
   type AttendanceLog = {
@@ -130,6 +132,13 @@ export default function HomeScreen() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await handleListLogs();
+    setRefreshing(false);
+  };
+
   // useFocusEffect artık sadece handleListLogs çağıracak:
   useFocusEffect(
     useCallback(() => {
@@ -142,6 +151,14 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.navy]} // Android için döner çember rengi
+            tintColor={colors.navy} // iOS için döner çember rengi
+          />
+        }
       >
         <View style={styles.topBar}>
           <View>
@@ -169,7 +186,8 @@ export default function HomeScreen() {
           <View style={styles.profileMeta}>
             <Text style={styles.profileName}>{employee?.name}</Text>
             <Text style={styles.profileRole}>
-              {employee?.job ?? "Personel"} · {employee?.department?? "Departman"}
+              {employee?.job ?? "Personel"} ·{" "}
+              {employee?.department ?? "Departman"}
             </Text>
             <Text style={styles.profileCode}>
               Sicil {employee?.employeeCode}
@@ -212,9 +230,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Vardiya</Text>
-            <Text style={styles.statValueSm}>
-              {employee?.shift}
-            </Text>
+            <Text style={styles.statValueSm}>{employee?.shift}</Text>
             <Text style={styles.statHint}>{employee?.shift_type}</Text>
           </View>
           <View style={styles.statCard}>
